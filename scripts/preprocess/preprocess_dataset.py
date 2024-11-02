@@ -19,7 +19,7 @@ from pathlib import Path
 import shutil
 import sys
 
-sys.path.append('../')
+sys.path.append('../..')
 from typing import Any, Dict, List, Optional, Tuple, Union
 import weakref
 
