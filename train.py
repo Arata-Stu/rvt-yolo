@@ -8,21 +8,16 @@ from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor
 from pytorch_lightning import loggers as pl_loggers
 import os
 import datetime
+import argparse
 
-def main():
+def main(model_config, exp_config, dataset_config):
     base_save_dir = './result'
     
     # 実行時のタイムスタンプを付与して、一意のディレクトリ名を生成
     timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     
-    config_paths = [
-        './config/model/yolox/yolox-s.yaml',
-        './config/dataset/gen1/gen1-single.yaml',
-        './config/experiment/single/train.yaml'
-    ]
-
     # 各 YAML ファイルを読み込んで OmegaConf にマージ
-    configs = [OmegaConf.load(path) for path in config_paths]
+    configs = [OmegaConf.load(path) for path in [model_config, exp_config, dataset_config]]
     merged_conf = OmegaConf.merge(*configs)
     dynamically_modify_train_config(merged_conf)
     
@@ -87,4 +82,10 @@ def main():
     trainer.fit(model, datamodule=data)
 
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser(description='Train a model with specified YAML config files')
+    parser.add_argument('--model', type=str, required=True, help='Path to model configuration file')
+    parser.add_argument('--exp', type=str, required=True, help='Path to experiment configuration file')
+    parser.add_argument('--dataset', type=str, required=True, help='Path to dataset configuration file')
+    
+    args = parser.parse_args()
+    main(args.model, args.exp, args.dataset)

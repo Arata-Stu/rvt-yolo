@@ -10,7 +10,7 @@ import os
 import datetime
 import argparse
 
-def main(ckpt_path):
+def main(ckpt_path, model_config, exp_config, dataset_config):
     # ckpt_pathからトレーニングのベースディレクトリパスを取得
     train_dir = os.path.dirname(ckpt_path)
     
@@ -19,15 +19,8 @@ def main(ckpt_path):
     save_dir = os.path.join(train_dir, 'test', test_timestamp)
     os.makedirs(save_dir, exist_ok=True)  # 保存ディレクトリを作成
 
-    # configファイルを読み込み
-    config_paths = [
-        './config/model/yolox/yolox-s.yaml',
-        './config/dataset/gen1/gen1-single.yaml',
-        './config/experiment/single/train.yaml'
-    ]
-
     # 各 YAML ファイルを読み込んで OmegaConf にマージ
-    configs = [OmegaConf.load(path) for path in config_paths]
+    configs = [OmegaConf.load(path) for path in [model_config, exp_config, dataset_config]]
     merged_conf = OmegaConf.merge(*configs)
     dynamically_modify_train_config(merged_conf)
 
@@ -64,9 +57,12 @@ if __name__ == '__main__':
     # argparseでコマンドライン引数を取得
     parser = argparse.ArgumentParser(description="Model testing script")
     parser.add_argument('--ckpt_path', type=str, required=True, help="Path to the checkpoint file")
+    parser.add_argument('--model', type=str, required=True, help='Path to model configuration file')
+    parser.add_argument('--exp', type=str, required=True, help='Path to experiment configuration file')
+    parser.add_argument('--dataset', type=str, required=True, help='Path to dataset configuration file')
     
     # 引数をパース
     args = parser.parse_args()
 
-    # ckpt_pathをmainに渡す
-    main(args.ckpt_path)
+    # 各設定ファイルとckpt_pathをmainに渡す
+    main(args.ckpt_path, args.model, args.exp, args.dataset)
