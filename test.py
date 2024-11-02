@@ -36,9 +36,8 @@ def main(ckpt_path, model_config, exp_config, dataset_config):
 
     # TensorBoard Loggerもsave_dirに対応させる
     logger = pl_loggers.TensorBoardLogger(
-        save_dir=train_dir,  # トレーニングディレクトリにテスト結果を保存
-        name='test',  # テスト用
-        version=test_timestamp  # テストのタイムスタンプをバージョン名に使用
+        save_dir=save_dir,  # ckptの保存ディレクトリに合わせる
+        name='',  # nameを空にすることで、サブディレクトリを作成しない
     )
 
     # トレーナーを設定
