@@ -18,7 +18,7 @@ def main():
     config_paths = [
         './config/model/yolox/yolox-s.yaml',
         './config/dataset/gen1/gen1-single.yaml',
-        './config/experiment/train.yaml'
+        './config/experiment/single/train.yaml'
     ]
 
     # 各 YAML ファイルを読み込んで OmegaConf にマージ
