@@ -61,8 +61,8 @@ def main(model_config, exp_config, dataset_config):
 
     # TensorBoard Loggerもsave_dirに対応させる
     logger = pl_loggers.TensorBoardLogger(
-        save_dir=os.path.join(base_save_dir, dataset_name, model_name, ev_representation, timestamp),  # ベースディレクトリ
-        name='train',  # トレーニング用
+        save_dir=save_dir,  # ckptの保存ディレクトリに合わせる
+        name='',  # nameを空にすることで、サブディレクトリを作成しない
     )
 
     train_cfg = merged_conf.experiment.training
