@@ -1,0 +1,37 @@
+dataset:
+  name: gen4
+  data_dir: './datasets/pre_gen4'
+  orig_size: [360, 720]
+  target_size: ??? ## padded data size
+
+  access_mode: 'random'
+  sequence_length: 5
+
+  ev_representation: event_frame
+  ev_delta_t: 50
+  n_bins: 10
+
+  guarantee_labels: false
+  downsample_by_factor_2: true
+  only_load_end_labels: false
+
+  data_augmentation:
+    prob_hflip: 0.5
+    rotate:
+      prob: 0.0
+      min_angle_deg: -6
+      max_angle_deg: 6
+    zoom:
+      prob: 0.0
+      zoom_in:
+        weight: 8
+        factor:
+          min: 1
+          max: 1.5
+      zoom_out:
+        weight: 2
+        factor:
+          min: 1
+          max: 1.2
+
+         

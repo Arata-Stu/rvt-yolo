@@ -1,0 +1,3 @@
+name: "event_frame"
+nbins: 10
+count_cutoff: 10
