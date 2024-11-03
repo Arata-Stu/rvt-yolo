@@ -1,3 +1,4 @@
 method: COUNT
+frame: 100
 value: 50000
 step: 50

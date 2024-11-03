@@ -1,4 +1,5 @@
 method: DURATION
 # value is in milliseconds!
+frame: 100
 value: 50
 step: 50

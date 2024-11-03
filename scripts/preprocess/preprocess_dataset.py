@@ -346,11 +346,12 @@ def labels_and_ev_repr_timestamps(npy_file: Path,
                                   split_type: SplitType,
                                   filter_cfg: DictConfig,
                                   align_t_ms: int,
+                                  ts_step_frame_ms: int,
                                   ts_step_ev_repr_ms: int,
                                   dataset_type: str):
     assert npy_file.exists()
     assert npy_file.suffix == '.npy'
-    ts_step_frame_ms = 100
+    ts_step_frame_ms = ts_step_frame_ms
     assert ts_step_frame_ms >= ts_step_ev_repr_ms
     assert ts_step_frame_ms % ts_step_ev_repr_ms == 0 and ts_step_ev_repr_ms > 0
 
@@ -547,6 +548,7 @@ def process_sequence(dataset: str,
                      filter_cfg: DictConfig,
                      event_representation: RepresentationBase,
                      ev_repr_num_events: Optional[int],
+                     ts_step_frame_ms: Optional[int],
                      ev_repr_delta_ts_ms: Optional[int],
                      ts_step_ev_repr_ms: int,
                      downsample_by_2: bool,
@@ -585,6 +587,7 @@ def process_sequence(dataset: str,
                     split_type=split_type,
                     filter_cfg=filter_cfg,
                     align_t_ms=align_t_ms,
+                    ts_step_frame_ms=ts_step_frame_ms,
                     ts_step_ev_repr_ms=ts_step_ev_repr_ms,
                     dataset_type=dataset)
         except NoLabelsException:
@@ -643,6 +646,7 @@ class FilterConf:
 @dataclass
 class EventWindowExtractionConf:
     method: AggregationType = MISSING
+    frame: int = MISSING
     value: int = MISSING
     step: int = MISSING
 
@@ -840,11 +844,13 @@ if __name__ == '__main__':
     if config.event_window_extraction.method == AggregationType.COUNT:
         ev_repr_num_events = config.event_window_extraction.value
         ## modification
+        ts_step_frame_ms = config.event_window_extraction.frame
         ts_step_ev_repr_ms = config.event_window_extraction.step
     else:
         assert config.event_window_extraction.method == AggregationType.DURATION
         ev_repr_delta_ts_ms = config.event_window_extraction.value
         ## modification
+        ts_step_frame_ms = config.event_window_extraction.frame
         ts_step_ev_repr_ms = config.event_window_extraction.step
     
     if num_processes > 1:
@@ -854,6 +860,7 @@ if __name__ == '__main__':
                        filter_cfg,
                        ev_repr,
                        ev_repr_num_events,
+                       ts_step_frame_ms,
                        ev_repr_delta_ts_ms,
                        ts_step_ev_repr_ms,
                        downsample_by_2)
@@ -867,6 +874,7 @@ if __name__ == '__main__':
                              filter_cfg=filter_cfg,
                              event_representation=ev_repr,
                              ev_repr_num_events=ev_repr_num_events,
+                             ts_step_frame_ms=ts_step_frame_ms,
                              ev_repr_delta_ts_ms=ev_repr_delta_ts_ms,
                              ts_step_ev_repr_ms=ts_step_ev_repr_ms,
                              downsample_by_2=downsample_by_2,
