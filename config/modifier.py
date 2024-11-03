@@ -41,7 +41,7 @@ def dynamically_modify_train_config(config: DictConfig):
             num_classes = 2 if dataset_name == 'gen1' else 3
             mdl_cfg.head.num_classes = num_classes
             print(f'Set {num_classes=} for detection head')
-        elif mdl_name == 'yolox':
+        elif mdl_name == 'yolox' or mdl_name == 'yolox-lstm':
             partition_split_32 = mdl_cfg.partition_split_32
             multiple_of = 32 * partition_split_32
             mdl_hw = _get_modified_hw_multiple_of(hw=dataset_hw, multiple_of=multiple_of)
@@ -54,10 +54,6 @@ def dynamically_modify_train_config(config: DictConfig):
                 'dsec': 8
             }
             mdl_cfg.head.num_classes = class_len_map[dataset_name]
-        elif mdl_name == 'ssd':
-            size = mdl_cfg.size
-            dataset_cfg.target_size = tuple([size, size])
-
         else:
             print(f'{mdl_name=} not available')
             raise NotImplementedError

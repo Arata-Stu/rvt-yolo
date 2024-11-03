@@ -1,5 +1,5 @@
 model:
-  name: 'yolox'
+  name: 'yolox-lstm'
   type: 'rnn'
   partition_split_32: 1
   
