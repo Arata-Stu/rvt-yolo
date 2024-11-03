@@ -835,13 +835,17 @@ if __name__ == '__main__':
 
     ev_repr_num_events = None
     ev_repr_delta_ts_ms = None
+    ts_step_ev_repr_ms = None
     if config.event_window_extraction.method == AggregationType.COUNT:
         ev_repr_num_events = config.event_window_extraction.value
+        ## modification
+        ts_step_ev_repr_ms = config.event_window_extraction.step
     else:
         assert config.event_window_extraction.method == AggregationType.DURATION
         ev_repr_delta_ts_ms = config.event_window_extraction.value
-    ts_step_ev_repr_ms = 50  # Could be an argument of the script.
-
+        ## modification
+        ts_step_ev_repr_ms = config.event_window_extraction.step
+    
     if num_processes > 1:
         chunksize = 1
         func = partial(process_sequence,
