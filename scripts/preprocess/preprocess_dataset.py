@@ -644,6 +644,7 @@ class FilterConf:
 class EventWindowExtractionConf:
     method: AggregationType = MISSING
     value: int = MISSING
+    step: int = MISSING
 
 @dataclass
 class EventFrameConf:
