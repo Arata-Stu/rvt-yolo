@@ -525,8 +525,9 @@ def write_event_representations(in_h5_file: Path,
 
             #範囲外の値を外れ値といclip
             height, width = h5_reader.get_height_and_width()
-            ev_window['x'] = np.clip(ev_window['x'], 0, height - 1)
-            ev_window['y'] = np.clip(ev_window['y'], 0, width - 1)
+            ev_window['x'] = np.clip(ev_window['x'], 0, width - 1)
+            ev_window['y'] = np.clip(ev_window['y'], 0, height - 1)
+
             ev_repr = event_representation.construct(x=ev_window['x'],
                                                      y=ev_window['y'],
                                                      pol=ev_window['p'],
