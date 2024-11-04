@@ -1,12 +1,14 @@
 import torch
 import torch.nn as nn
 import pytorch_lightning as pl
+from functools import partial
 from omegaconf import DictConfig
 
 from models.detection.build import RNNDetectionModel
 from modules.utils.rnn_state import RNNStates
 from utils.eval.prophesee.evaluator import PropheseeEvaluator
 from utils.eval.prophesee.io.box_loading import to_prophesee
+from models.detection.yolox.utils.boxes import postprocess
 
 
 class SSMModule(pl.LightningModule):
@@ -27,6 +29,12 @@ class SSMModule(pl.LightningModule):
         
         self.classes = CLASSES  # クラスを保持
         self.model = RNNDetectionModel(model_config=full_config.model)
+
+        self.post_process = partial(postprocess,
+                                    num_classes=full_config.model.head_config.num_classes,
+                                    conf_thre=full_config.model.postprocess_config.conf_thre,
+                                    nms_thre=full_config.model.postprocess_config.nms_thre,
+                                    class_agnostic=False)
 
         self.train_rnn_state = RNNStates()
         self.test_rnn_state = RNNStates()
@@ -194,9 +202,11 @@ class SSMModule(pl.LightningModule):
             batched_targets = torch.cat(batched_targets, dim=0)
             batched_times = torch.cat(batched_times, dim=0)  # タイムスタンプのバッチ化
 
-            processed_preds = self.model.forward_detect(
+            preds = self.model.forward_detect(
                 backbone_features=batched_backbone_features
             )
+
+            processed_preds = self.post_process(prediction=preds)
 
             # Prophesee形式に変換
             loaded_labels_proph, yolox_preds_proph = to_prophesee(
@@ -289,9 +299,11 @@ class SSMModule(pl.LightningModule):
             batched_targets = torch.cat(batched_targets, dim=0)
             batched_times = torch.cat(batched_times, dim=0)  # タイムスタンプのバッチ化
 
-            processed_preds = self.model.forward_detect(
-                backbone_features=batched_backbone_features,
+            preds = self.model.forward_detect(
+                backbone_features=batched_backbone_features
             )
+
+            processed_preds = self.post_process(prediction=preds)
 
             # Prophesee形式に変換
             loaded_labels_proph, yolox_preds_proph = to_prophesee(

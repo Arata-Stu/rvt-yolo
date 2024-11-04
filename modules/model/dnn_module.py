@@ -1,11 +1,13 @@
 import torch
 import torch.nn as nn
 import pytorch_lightning as pl
+from functools import partial
 from omegaconf import DictConfig
 
 from models.detection.build import DNNDetectionModel
 from utils.eval.prophesee.evaluator import PropheseeEvaluator
 from utils.eval.prophesee.io.box_loading import to_prophesee
+from models.detection.yolox.utils.boxes import postprocess
 
 
 class DNNModule(pl.LightningModule):
@@ -26,6 +28,13 @@ class DNNModule(pl.LightningModule):
         
         self.classes = CLASSES  # クラスを保持
         self.model = DNNDetectionModel(model_config=full_config.model)
+
+        self.post_process = partial(postprocess,
+                                    num_classes=full_config.model.head_config.num_classes,
+                                    conf_thre=full_config.model.postprocess_config.conf_thre,
+                                    nms_thre=full_config.model.postprocess_config.nms_thre,
+                                    class_agnostic=False)
+
 
        
     def setup(self, stage):
@@ -72,7 +81,9 @@ class DNNModule(pl.LightningModule):
 
         targets.requires_grad = False
         
-        processed_preds = model_to_eval(imgs)
+        preds = model_to_eval(imgs)
+
+        processed_preds = self.post_process(prediction=preds)
 
         loaded_labels_proph, yolox_preds_proph = to_prophesee(loaded_label_tensor=targets, 
                                                               label_timestamps=timestamps, 
@@ -104,7 +115,9 @@ class DNNModule(pl.LightningModule):
         timestamps = batch['timestamps'][:, -1]
         targets.requires_grad = False
         
-        processed_preds = model_to_eval(imgs)
+        preds = model_to_eval(imgs)
+
+        processed_preds = self.post_process(prediction=preds)
 
         loaded_labels_proph, yolox_preds_proph = to_prophesee(loaded_label_tensor=targets, 
                                                               label_timestamps=timestamps, 
