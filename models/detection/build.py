@@ -93,8 +93,7 @@ class DNNDetectionModel(nn.Module):
             }
             outputs = outputs["total_loss"]
         else:
-            predictions = self.head(fpn_outs)
-            outputs = self.post_process(prediction=predictions)
+            outputs = self.head(fpn_outs)
       
         return outputs
     
@@ -157,8 +156,7 @@ class RNNDetectionModel(nn.Module):
             outputs = outputs["total_loss"]
             return outputs
         else:
-            predictions = self.head(fpn_features)
-            outputs = self.post_process(prediction=predictions)
+            outputs = self.head(fpn_features)
         
             return outputs
 
