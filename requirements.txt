@@ -27,5 +27,6 @@ einops
 pycocotools
 
 ## NVIDIA GPU
-tensorRT
-pycuda
+# tensorRT
+# pycuda
+# onnx
