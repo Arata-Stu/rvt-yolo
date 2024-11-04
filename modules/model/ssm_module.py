@@ -83,7 +83,7 @@ class SSMModule(pl.LightningModule):
         # モデルへの入力
         backbone_features, states = self.model.forward_backbone(
             x=sequence_events,
-            states=prev_states,
+            previous_states=prev_states,
             token_mask=sequence_is_padded_mask,
         )
 
