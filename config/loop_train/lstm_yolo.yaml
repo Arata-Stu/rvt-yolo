@@ -1,0 +1,12 @@
+# config_list.yaml
+model_configs:
+  - "./config/model/yolox-lstm/rnn_yolo.yaml"
+
+exp_configs:
+  - "./config/experiment/sequence/train.yaml"
+
+dataset_configs:
+  - "./config/dataset/gen1/event_frame/sequence/dt_10.yaml"
+  - "./config/dataset/gen1/event_frame/sequence/dt_20.yaml"
+  - "./config/dataset/gen1/event_frame/sequence/dt_33.yaml"
+  - "./config/dataset/gen1/event_frame/sequence/dt_50.yaml"
