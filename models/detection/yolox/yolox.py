@@ -7,7 +7,6 @@ from omegaconf import DictConfig
 from .network.backbone.darknet import CSPDarknet
 from .network.backbone.pafpn import YOLOPAFPN
 from .network.head.yolo_head import YOLOXHead
-from .utils.boxes import postprocess
 
 def build_darknet(backbone_config: DictConfig):
     return CSPDarknet(dep_mul=backbone_config.depth,
