@@ -30,9 +30,9 @@ class DNNModule(pl.LightningModule):
         self.model = DNNDetectionModel(model_config=full_config.model)
 
         self.post_process = partial(postprocess,
-                                    num_classes=full_config.model.head_config.num_classes,
-                                    conf_thre=full_config.model.postprocess_config.conf_thre,
-                                    nms_thre=full_config.model.postprocess_config.nms_thre,
+                                    num_classes=full_config.model.head.num_classes,
+                                    conf_thre=full_config.model.postprocess.conf_thre,
+                                    nms_thre=full_config.model.postprocess.nms_thre,
                                     class_agnostic=False)
 
 
