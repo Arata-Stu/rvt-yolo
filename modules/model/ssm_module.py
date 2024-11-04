@@ -84,7 +84,6 @@ class SSMModule(pl.LightningModule):
         backbone_features, states = self.model.forward_backbone(
             x=sequence_events,
             previous_states=prev_states,
-            token_mask=sequence_is_padded_mask,
         )
 
         prev_states = states
@@ -167,7 +166,7 @@ class SSMModule(pl.LightningModule):
             
             # 時系列データをRNNに渡す
             backbone_features, states = self.model.forward_backbone(
-                x=events, previous_states=prev_states, token_mask=token_mask
+                x=events, previous_states=prev_states
             )
             prev_states = states
             
@@ -264,7 +263,7 @@ class SSMModule(pl.LightningModule):
             
             # 時系列データをRNNに渡す
             backbone_features, states = self.model.forward_backbone(
-                x=events, previous_states=prev_states, token_mask=token_mask
+                x=events, previous_states=prev_states
             )
             prev_states = states
             
