@@ -13,13 +13,13 @@ def build_backbone(backbone_config: DictConfig):
     if name == 'darknet':
         print('darknet')
         backbone = build_darknet(backbone_config=backbone_config)
-    elif name == 'MaxViTRNN':
-        print('RVT')
-        backbone = build_recurrent_backbone(backbone_cfg=backbone_config)
     elif name == 'darknet_lstm':
         print('darknet')
         print('LSTM')
         backbone = Darknet_LSTM(backbone_config=backbone_config)
+    elif name == 'MaxViTRNN' or name == 'MaxViTRNN-SSM':
+        print('RVT')
+        backbone = build_recurrent_backbone(backbone_cfg=backbone_config)
     else:
         NotImplementedError
     

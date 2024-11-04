@@ -19,7 +19,7 @@ def dynamically_modify_train_config(config: DictConfig):
         if mdl_name == 'rvt':
             backbone_cfg = mdl_cfg.backbone
             backbone_name = backbone_cfg.name
-            if backbone_name == 'MaxViTRNN':
+            if backbone_name == 'MaxViTRNN' or backbone_name == 'MaxViTRNN-SSM':
                 partition_split_32 = backbone_cfg.partition_split_32
                 assert partition_split_32 in (1, 2, 4)
 
