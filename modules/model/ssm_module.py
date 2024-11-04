@@ -81,7 +81,7 @@ class SSMModule(pl.LightningModule):
         prev_states = self.val_rnn_state.get_states(worker_id=worker_id)
 
         # モデルへの入力
-        backbone_features, states = self.model.forward_detect(
+        backbone_features, states = self.model.forward_backbone(
             x=sequence_events,
             states=prev_states,
             token_mask=sequence_is_padded_mask,
