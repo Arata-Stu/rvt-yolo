@@ -14,8 +14,8 @@ experiment:
 
   dataset:
     train:
-      num_workers: 12
-      batch_size: 16
+      num_workers: 8
+      batch_size: 4
     val:
       num_workers: 8
       batch_size: 1
