@@ -1,6 +1,6 @@
 model:
   name: 'rvt'
-  type: 'rnn'
+  type: 'smm'
   
   backbone:
     name: MaxViTRNN-SSM
@@ -10,8 +10,8 @@ model:
         mode: reduce-overhead
     input_channels: 3
     enable_masking: true
-    partition_split_32: 2
-    embed_dim: 64 # tiny: 32, s: 48, base: 64
+    partition_split_32: 1
+    embed_dim: 32 # tiny: 32, s: 48, base: 64
     dim_multiplier: [1, 2, 4, 8]
     num_blocks: [1, 1, 1, 1]
     T_max_chrono_init: [4, 8, 16, 32]
