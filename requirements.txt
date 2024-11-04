@@ -19,12 +19,13 @@ typeguard
 #yolox
 loguru
 
-#yolov8, v11
-ultralytics
-
 #rvt
 StrEnum
 einops
 
 #eval
 pycocotools
+
+## NVIDIA GPU
+tensorRT
+pycuda
