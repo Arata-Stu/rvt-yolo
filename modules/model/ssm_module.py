@@ -78,7 +78,7 @@ class SSMModule(pl.LightningModule):
         # 初期状態のリセット
         worker_id = 0
         self.train_rnn_state.reset(worker_id=worker_id, indices_or_bool_tensor=is_first_sample)
-        prev_states = self.val_rnn_state.get_states(worker_id=worker_id)
+        prev_states = self.train_rnn_state.get_states(worker_id=worker_id)
 
         # モデルへの入力
         backbone_features, states = self.model.forward_backbone(
