@@ -37,9 +37,13 @@ def dynamically_modify_train_config(config: DictConfig):
             else:
                 print(f'{backbone_name=} not available')
                 raise NotImplementedError
-            num_classes = 2 if dataset_name == 'gen1' else 3
-            mdl_cfg.head.num_classes = num_classes
-            print(f'Set {num_classes=} for detection head')
+            class_len_map = {
+                'gen1': 2,
+                'gen4': 3,
+                'dsec': 8
+            }
+            mdl_cfg.head.num_classes = class_len_map[dataset_name]
+            print(f'Set {class_len_map[dataset_name]=} for detection head')
         elif 'yolox' in mdl_name:  # 'yolox' が含まれているかどうかで判定
             partition_split_32 = mdl_cfg.partition_split_32
             multiple_of = 32 * partition_split_32
