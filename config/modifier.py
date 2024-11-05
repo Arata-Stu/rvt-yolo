@@ -9,17 +9,16 @@ def dynamically_modify_train_config(config: DictConfig):
     with open_dict(config):
         
         dataset_cfg = config.dataset
-
         dataset_name = dataset_cfg.name
         assert dataset_name in {'gen1', 'gen4'}
         dataset_hw = dataset_cfg.orig_size
 
         mdl_cfg = config.model
         mdl_name = mdl_cfg.name
-        if mdl_name == 'rvt':
+        if 'rvt' in mdl_name:  # 'rvt' が含まれているかどうかで判定
             backbone_cfg = mdl_cfg.backbone
             backbone_name = backbone_cfg.name
-            if backbone_name == 'MaxViTRNN' or backbone_name == 'MaxViTRNN-SSM':
+            if backbone_name in {'MaxViTRNN', 'MaxViTRNN-SSM'}:
                 partition_split_32 = backbone_cfg.partition_split_32
                 assert partition_split_32 in (1, 2, 4)
 
@@ -41,7 +40,7 @@ def dynamically_modify_train_config(config: DictConfig):
             num_classes = 2 if dataset_name == 'gen1' else 3
             mdl_cfg.head.num_classes = num_classes
             print(f'Set {num_classes=} for detection head')
-        elif mdl_name == 'yolox' or mdl_name == 'yolox-lstm':
+        elif 'yolox' in mdl_name:  # 'yolox' が含まれているかどうかで判定
             partition_split_32 = mdl_cfg.partition_split_32
             multiple_of = 32 * partition_split_32
             mdl_hw = _get_modified_hw_multiple_of(hw=dataset_hw, multiple_of=multiple_of)
@@ -57,6 +56,7 @@ def dynamically_modify_train_config(config: DictConfig):
         else:
             print(f'{mdl_name=} not available')
             raise NotImplementedError
+
 
 
 def _get_modified_hw_multiple_of(hw: Tuple[int, int], multiple_of: int) -> Tuple[int, ...]:

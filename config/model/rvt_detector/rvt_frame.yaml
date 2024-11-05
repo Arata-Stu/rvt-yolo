@@ -1,5 +1,5 @@
 model:
-  name: 'rvt'
+  name: 'rvt-t'
   type: 'rnn'
   
   backbone:

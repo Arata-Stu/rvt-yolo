@@ -1,5 +1,5 @@
 model:
-  name: 'yolox'
+  name: 'yolox-s'
   type: 'dnn'
   partition_split_32: 1
   

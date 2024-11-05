@@ -1,5 +1,5 @@
 model:
-  name: 'rvt'
+  name: 'rvt-ssm'
   type: 'smm'
   
   backbone:
