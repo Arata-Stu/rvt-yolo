@@ -1,6 +1,6 @@
 # config_list.yaml
 model_configs:
-  - "./config/model/yolox-lstm/rnn_yolo.yaml"
+  - "./config/model/rvt_detector/rvt_frame.yaml"
 
 exp_configs:
   - "./config/experiment/sequence/train.yaml"

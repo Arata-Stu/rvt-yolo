@@ -1,7 +1,7 @@
 experiment:
   training:
     precision: '16-mixed'
-    max_epochs: 10000
+    max_epochs: 50
     max_steps: 400000
     learning_rate: 0.0002
     weight_decay: 0
@@ -15,10 +15,10 @@ experiment:
   dataset:
     train:
       num_workers: 8
-      batch_size: 16
+      batch_size: 32
     val:
       num_workers: 8
-      batch_size: 16
+      batch_size: 32
     test:
       num_workers: 8
-      batch_size: 16
+      batch_size: 32
