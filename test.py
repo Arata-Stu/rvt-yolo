@@ -14,9 +14,7 @@ def main(ckpt_path, model_config, exp_config, dataset_config):
     # ckpt_pathからトレーニングのベースディレクトリパスを取得
     train_dir = os.path.dirname(ckpt_path)
     
-    # 実行時のタイムスタンプを付与して、一意のテストディレクトリ名を生成
-    test_timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-    save_dir = os.path.join(train_dir, 'test', test_timestamp)
+    save_dir = os.path.join(train_dir, 'test')
     os.makedirs(save_dir, exist_ok=True)  # 保存ディレクトリを作成
 
     # 各 YAML ファイルを読み込んで OmegaConf にマージ
@@ -38,6 +36,7 @@ def main(ckpt_path, model_config, exp_config, dataset_config):
     logger = pl_loggers.TensorBoardLogger(
         save_dir=save_dir,  # ckptの保存ディレクトリに合わせる
         name='',  # nameを空にすることで、サブディレクトリを作成しない
+        version='',
     )
 
     # トレーナーを設定
