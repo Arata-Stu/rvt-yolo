@@ -4,6 +4,13 @@ from omegaconf import OmegaConf
 from config.modifier import dynamically_modify_train_config
 from modules.fetch import fetch_model_module, fetch_data_module
 
+import sys
+import os
+
+# プロジェクトのルートディレクトリを指定
+project_root = os.path.abspath(os.path.join(os.getcwd(), './../..'))
+sys.path.append(project_root)
+
 # 引数を設定
 parser = argparse.ArgumentParser(description="推論結果を動画として保存")
 parser.add_argument('--model', type=str, required=True, help='Path to model configuration file')
