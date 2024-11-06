@@ -33,7 +33,7 @@ def build_dataset(full_config: DictConfig, mode='train'):
 
     # 各モードに応じた変換の設定
     if mode == 'train':
-        transform_pipeline = [label_padding, random_augmentation, label_padding, event_padding, format_yolox]
+        transform_pipeline = [random_augmentation, label_padding, event_padding, format_yolox]
     else:
         transform_pipeline = [label_padding, event_padding, format_yolox]
 
