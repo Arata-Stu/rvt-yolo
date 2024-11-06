@@ -158,8 +158,8 @@ class SSMModule(pl.LightningModule):
 
         for t in range(sequence_length):
             # 各時系列ステップのデータ取得
-            events = sequence_events[:, t, :, :, :].to(dtype=self.dtype).unsqueeze(0)
-            targets = sequence_targets[:, t, :, :].to(dtype=self.dtype).unsqueeze(0)
+            events = sequence_events[:, t, :, :, :].to(dtype=self.dtype)
+            targets = sequence_targets[:, t, :, :].to(dtype=self.dtype)
             token_mask = sequence_is_padded_mask[:, t]
             time = sequence_timestamps[:, t]
             targets.requires_grad = False
@@ -255,8 +255,8 @@ class SSMModule(pl.LightningModule):
 
         for t in range(sequence_length):
             # 各時系列ステップのデータ取得
-            events = sequence_events[:, t, :, :, :].to(dtype=self.dtype).unsqueeze(0)
-            targets = sequence_targets[:, t, :, :].to(dtype=self.dtype).unsqueeze(0)
+            events = sequence_events[:, t, :, :, :].to(dtype=self.dtype)
+            targets = sequence_targets[:, t, :, :].to(dtype=self.dtype)
             token_mask = sequence_is_padded_mask[:, t]
             time = sequence_timestamps[:, t]
             targets.requires_grad = False
