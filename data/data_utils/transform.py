@@ -244,22 +244,25 @@ def flip_horizontal(image, labels):
 
     Args:
         image (numpy.ndarray): Image array of shape (D, H, W).
-        labels (numpy.ndarray): Labels array with fields 'x', 'y', 'w', 'h'.
+        labels (numpy.ndarray or None): Labels array with fields 'x', 'y', 'w', 'h', or None.
 
     Returns:
         flipped_image (numpy.ndarray): Horizontally flipped image.
-        flipped_labels (numpy.ndarray): Labels adjusted for the flipped image.
+        flipped_labels (numpy.ndarray or None): Labels adjusted for the flipped image, or None.
     """
 
     # Flip the image horizontally
     flipped_image = image[:, :, ::-1]
     image_width = image.shape[2]
 
-    # Adjust the labels
-    labels = labels.copy()
-    # padding値 (x=0, w=0) のラベルは変更せずに残す
-    mask = (labels['x'] != 0) | (labels['w'] != 0)
-    labels['x'][mask] = image_width - labels['x'][mask] - labels['w'][mask]
+    if labels is not None:
+        # Adjust the labels
+        labels = labels.copy()
+        # Keep labels with padding values (x=0, w=0) unchanged
+        mask = (labels['x'] != 0) | (labels['w'] != 0)
+        labels['x'][mask] = image_width - labels['x'][mask] - labels['w'][mask]
+    else:
+        labels = None
 
     return flipped_image, labels
 
@@ -269,12 +272,12 @@ def rotate(image, labels, angle):
 
     Args:
         image (numpy.ndarray): Image array of shape (D, H, W).
-        labels (numpy.ndarray): Labels array with fields 'x', 'y', 'w', 'h'.
+        labels (numpy.ndarray or None): Labels array with fields 'x', 'y', 'w', 'h', or None.
         angle (float): Rotation angle in degrees. Positive values mean counter-clockwise rotation.
 
     Returns:
         rotated_image (numpy.ndarray): Rotated image.
-        rotated_labels (numpy.ndarray): Labels adjusted for the rotated image.
+        rotated_labels (numpy.ndarray or None): Labels adjusted for the rotated image, or None.
     """
     D, H, W = image.shape
     center = (W / 2, H / 2)
@@ -293,54 +296,57 @@ def rotate(image, labels, angle):
     # Convert back to original shape (D, H, W)
     rotated_image = np.transpose(rotated_image_cv2, (2, 0, 1))
 
-    # Rotate the labels
-    labels = labels.copy()
-    new_boxes = []
+    if labels is not None:
+        # Rotate the labels
+        labels = labels.copy()
+        new_boxes = []
 
-    # Compute rotation matrix for labels
-    theta = np.deg2rad(-angle)  # Note: cv2 uses opposite sign for angle
-    rotation_matrix = np.array([
-        [np.cos(theta), -np.sin(theta)],
-        [np.sin(theta),  np.cos(theta)]
-    ])
-
-    for label in labels:
-        x, y, w, h = label['x'], label['y'], label['w'], label['h']
-        # Define the four corners of the bounding box
-        corners = np.array([
-            [x, y],
-            [x + w, y],
-            [x + w, y + h],
-            [x, y + h]
+        # Compute rotation matrix for labels
+        theta = np.deg2rad(-angle)  # Note: cv2 uses opposite sign for angle
+        rotation_matrix = np.array([
+            [np.cos(theta), -np.sin(theta)],
+            [np.sin(theta),  np.cos(theta)]
         ])
 
-        # Shift corners to center
-        corners_centered = corners - center
+        for label in labels:
+            x, y, w, h = label['x'], label['y'], label['w'], label['h']
+            # Define the four corners of the bounding box
+            corners = np.array([
+                [x, y],
+                [x + w, y],
+                [x + w, y + h],
+                [x, y + h]
+            ])
 
-        # Apply rotation
-        rotated_corners = np.dot(corners_centered, rotation_matrix.T)
+            # Shift corners to center
+            corners_centered = corners - center
 
-        # Shift back
-        rotated_corners += center
+            # Apply rotation
+            rotated_corners = np.dot(corners_centered, rotation_matrix.T)
 
-        # Get new bounding box
-        x_coords = rotated_corners[:, 0]
-        y_coords = rotated_corners[:, 1]
-        x_min = x_coords.min()
-        y_min = y_coords.min()
-        x_max = x_coords.max()
-        y_max = y_coords.max()
+            # Shift back
+            rotated_corners += center
 
-        new_w = x_max - x_min
-        new_h = y_max - y_min
+            # Get new bounding box
+            x_coords = rotated_corners[:, 0]
+            y_coords = rotated_corners[:, 1]
+            x_min = x_coords.min()
+            y_min = y_coords.min()
+            x_max = x_coords.max()
+            y_max = y_coords.max()
 
-        new_boxes.append((x_min, y_min, new_w, new_h))
+            new_w = x_max - x_min
+            new_h = y_max - y_min
 
-    # Update labels
-    labels['x'] = np.array([box[0] for box in new_boxes])
-    labels['y'] = np.array([box[1] for box in new_boxes])
-    labels['w'] = np.array([box[2] for box in new_boxes])
-    labels['h'] = np.array([box[3] for box in new_boxes])
+            new_boxes.append((x_min, y_min, new_w, new_h))
+
+        # Update labels
+        labels['x'] = np.array([box[0] for box in new_boxes])
+        labels['y'] = np.array([box[1] for box in new_boxes])
+        labels['w'] = np.array([box[2] for box in new_boxes])
+        labels['h'] = np.array([box[3] for box in new_boxes])
+    else:
+        labels = None
 
     return rotated_image, labels
 
@@ -349,12 +355,15 @@ def clip_bboxes(labels, image_shape):
     Clip bounding boxes to ensure they remain within the image bounds.
 
     Args:
-        labels (numpy.ndarray): Array with fields 'x', 'y', 'w', 'h'.
+        labels (numpy.ndarray or None): Array with fields 'x', 'y', 'w', 'h', or None.
         image_shape (Tuple[int, int]): Shape of the image (height, width).
 
     Returns:
-        clipped_labels (numpy.ndarray): Adjusted bounding boxes within image bounds.
+        clipped_labels (numpy.ndarray or None): Adjusted bounding boxes within image bounds, or None.
     """
+    if labels is None:
+        return None
+
     labels = labels.copy()
     height, width = image_shape
 
@@ -373,16 +382,19 @@ def remove_flat_labels(labels):
     Remove flat labels (where w <= 0 or h <= 0) from the labels array.
 
     Args:
-        labels (numpy.ndarray): Labels array with fields 'x', 'y', 'w', 'h'.
+        labels (numpy.ndarray or None): Labels array with fields 'x', 'y', 'w', 'h', or None.
 
     Returns:
         filtered_labels (numpy.ndarray or None): Labels with w > 0 and h > 0, or None if no labels remain.
     """
-    # 条件を満たすラベルのみを保持
+    if labels is None:
+        return None
+
+    # Keep only labels that satisfy the condition
     mask = (labels['w'] > 0) & (labels['h'] > 0)
     filtered_labels = labels[mask]
 
-    # 残りのラベルがない場合はNoneを返す
+    # Return None if no labels remain
     if len(filtered_labels) == 0:
         return None
 
@@ -396,7 +408,7 @@ def find_zoom_center(labels_list):
         labels_list (list): List of labels for each frame.
 
     Returns:
-        Tuple[int, int]: Coordinates for zoom center (x, y).
+        Tuple[int, int] or None: Coordinates for zoom center (x, y), or None if no valid labels.
     """
     possible_centers = []
 
@@ -420,13 +432,13 @@ def zoom_in(image, labels, zoom_factor, center=None):
 
     Args:
         image (numpy.ndarray): Image array of shape (D, H, W).
-        labels (numpy.ndarray): Labels array with fields 'x', 'y', 'w', 'h'.
+        labels (numpy.ndarray or None): Labels array with fields 'x', 'y', 'w', 'h', or None.
         zoom_factor (float): Factor by which to zoom in (>1).
         center (Tuple[int, int], optional): Coordinates (x, y) for the center of zoom.
 
     Returns:
         zoomed_image (numpy.ndarray): Zoomed-in image.
-        zoomed_labels (numpy.ndarray): Labels adjusted for the zoomed image.
+        zoomed_labels (numpy.ndarray or None): Labels adjusted for the zoomed image, or None.
     """
     D, H, W = image.shape
     new_H = int(H / zoom_factor)
@@ -438,8 +450,8 @@ def zoom_in(image, labels, zoom_factor, center=None):
         y1 = np.random.randint(0, H - new_H + 1)
     else:
         cx, cy = center
-        x1 = max(0, min(cx - new_W // 2, W - new_W))
-        y1 = max(0, min(cy - new_H // 2, H - new_H))
+        x1 = max(0, min(int(cx - new_W // 2), W - new_W))
+        y1 = max(0, min(int(cy - new_H // 2), H - new_H))
 
     # Crop the image
     cropped_image = image[:, y1:y1 + new_H, x1:x1 + new_W]
@@ -449,19 +461,21 @@ def zoom_in(image, labels, zoom_factor, center=None):
     zoomed_image_cv2 = cv2.resize(cropped_image_cv2, (W, H), interpolation=cv2.INTER_CUBIC)
     zoomed_image = np.transpose(zoomed_image_cv2, (2, 0, 1))  # (D, H, W)
 
-    # Adjust labels
-    labels = labels.copy()
-    labels['x'] = (labels['x'] - x1) * zoom_factor
-    labels['y'] = (labels['y'] - y1) * zoom_factor
-    labels['w'] = labels['w'] * zoom_factor
-    labels['h'] = labels['h'] * zoom_factor
+    if labels is not None:
+        # Adjust labels
+        labels = labels.copy()
+        labels['x'] = (labels['x'] - x1) * zoom_factor
+        labels['y'] = (labels['y'] - y1) * zoom_factor
+        labels['w'] = labels['w'] * zoom_factor
+        labels['h'] = labels['h'] * zoom_factor
 
-    # Clip the bounding boxes to ensure they remain within the image bounds
-    zoomed_labels = clip_bboxes(labels, (H, W))
-    zoomed_labels = remove_flat_labels(zoomed_labels)  # w > 0 and h > 0 の条件を適用
+        # Clip the bounding boxes to ensure they remain within the image bounds
+        zoomed_labels = clip_bboxes(labels, (H, W))
+        zoomed_labels = remove_flat_labels(zoomed_labels)  # Apply condition w > 0 and h > 0
+    else:
+        zoomed_labels = None
 
     return zoomed_image, zoomed_labels
-
 
 def zoom_out(image, labels, zoom_factor, center=None):
     """
@@ -469,13 +483,13 @@ def zoom_out(image, labels, zoom_factor, center=None):
 
     Args:
         image (numpy.ndarray): Image array of shape (D, H, W).
-        labels (numpy.ndarray): Labels array with fields 'x', 'y', 'w', 'h'.
+        labels (numpy.ndarray or None): Labels array with fields 'x', 'y', 'w', 'h', or None.
         zoom_factor (float): Factor by which to zoom out (>1).
         center (Tuple[int, int], optional): Coordinates (x, y) for the center of zoom.
 
     Returns:
         zoomed_image (numpy.ndarray): Zoomed-out image with padding.
-        zoomed_labels (numpy.ndarray): Labels adjusted for the zoomed image.
+        zoomed_labels (numpy.ndarray or None): Labels adjusted for the zoomed image, or None.
     """
     D, H, W = image.shape
     new_H = int(H / zoom_factor)
@@ -493,24 +507,26 @@ def zoom_out(image, labels, zoom_factor, center=None):
         y1 = np.random.randint(0, H - new_H + 1)
     else:
         cx, cy = center
-        x1 = max(0, min(cx - new_W // 2, W - new_W))
-        y1 = max(0, min(cy - new_H // 2, H - new_H))
-        
+        x1 = max(0, min(int(cx - new_W // 2), W - new_W))
+        y1 = max(0, min(int(cy - new_H // 2), H - new_H))
+            
     canvas[:, y1:y1 + new_H, x1:x1 + new_W] = resized_image
 
-    # Adjust labels
-    labels = labels.copy()
-    labels['x'] = labels['x'] / zoom_factor + x1
-    labels['y'] = labels['y'] / zoom_factor + y1
-    labels['w'] = labels['w'] / zoom_factor
-    labels['h'] = labels['h'] / zoom_factor
+    if labels is not None:
+        # Adjust labels
+        labels = labels.copy()
+        labels['x'] = labels['x'] / zoom_factor + x1
+        labels['y'] = labels['y'] / zoom_factor + y1
+        labels['w'] = labels['w'] / zoom_factor
+        labels['h'] = labels['h'] / zoom_factor
 
-    # Clip the bounding boxes to ensure they remain within the image bounds
-    zoomed_labels = clip_bboxes(labels, (H, W))
-    zoomed_labels = remove_flat_labels(zoomed_labels)  # w > 0 and h > 0 の条件を適用
+        # Clip the bounding boxes to ensure they remain within the image bounds
+        zoomed_labels = clip_bboxes(labels, (H, W))
+        zoomed_labels = remove_flat_labels(zoomed_labels)  # Apply condition w > 0 and h > 0
+    else:
+        zoomed_labels = None
 
     return canvas, zoomed_labels
-
 
 class RandomSpatialAugmentor:
     def __init__(self,
@@ -543,13 +559,13 @@ class RandomSpatialAugmentor:
         augmented_evframes_list = []
         augmented_labels_list = []
         
-        # 一度だけランダムな変換パラメータを決定
+        # Decide random transformation parameters once
         apply_h_flip = np.random.rand() < self.h_flip_prob
         apply_rotation = np.random.rand() < self.rotation_prob
         angle = np.random.uniform(*self.rotation_angle_range) if apply_rotation else None
         apply_zoom = np.random.rand() < self.zoom_prob
 
-        # ズームの設定
+        # Zoom settings
         zoom_func = None
         zoom_factor = None
         if apply_zoom:
@@ -561,14 +577,14 @@ class RandomSpatialAugmentor:
                 zoom_factor = np.random.uniform(*self.zoom_out_range)
                 zoom_func = zoom_out
         
-        # ズーム中心座標を決定（全フレームで共通）
+        # Determine zoom center coordinates (common for all frames)
         zoom_center = find_zoom_center(labels_list)
         if zoom_center is None:
-            # デフォルトで画像の中心を使用
+            # Use image center by default
             _, H, W = evframes_list[0].shape
             zoom_center = (W // 2, H // 2)
         
-        # 各フレームに対して同じ前処理を適用
+        # Apply the same preprocessing to each frame
         for evframes, labels in zip(evframes_list, labels_list):
             # Horizontal Flip
             if apply_h_flip:
@@ -582,17 +598,17 @@ class RandomSpatialAugmentor:
             if zoom_func is not None:
                 evframes, labels = zoom_func(evframes, labels, zoom_factor, center=zoom_center)
 
-            # 前処理されたフレームとラベルをリストに追加
+            # Add preprocessed frame and labels to the list
             augmented_evframes_list.append(evframes)
             augmented_labels_list.append(labels)
 
-        # 結果を辞書形式で返す
+        # Return the results as a dictionary
         outputs = {
             'events': augmented_evframes_list,
             'labels': augmented_labels_list,
             'img_size': inputs['img_size'],
             'is_first_sample': inputs['is_first_sample'],     
-            'is_padded_mask': inputs['is_padded_mask']   # パディングマスク
+            'is_padded_mask': inputs['is_padded_mask']   # Padding mask
         }
 
         return outputs
