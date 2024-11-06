@@ -9,6 +9,7 @@ model:
       name: 'darknet'
       depth: 0.33
       width: 0.5
+      input_dim: ???
       out_features: ["dark3", "dark4", "dark5"] #choose darknet outputs 'stem', 'dark 2 ~ 5'
       depthwise: false
       act: "silu"

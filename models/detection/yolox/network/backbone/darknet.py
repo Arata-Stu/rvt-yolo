@@ -13,6 +13,7 @@ class CSPDarknet(nn.Module):
         self,
         dep_mul,
         wid_mul,
+        input_dim=3,
         out_features=("dark3", "dark4", "dark5"),
         depthwise=False,
         act="silu",
@@ -31,8 +32,8 @@ class CSPDarknet(nn.Module):
         self.out_dims = {}
 
         # stem
-        self.stem = Focus(3, base_channels, ksize=3, act=act)
-        self.input_dims["stem"] = (3, "H", "W")  # 初期入力チャンネルは3（RGB画像）
+        self.stem = Focus(input_dim, base_channels, ksize=3, act=act)
+        self.input_dims["stem"] = (input_dim, "H", "W")  # 初期入力チャンネルは3（RGB画像）
         self.out_dims["stem"] = (base_channels, "H/2", "W/2")
 
         # dark2

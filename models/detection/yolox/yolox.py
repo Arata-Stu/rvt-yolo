@@ -11,6 +11,7 @@ from .network.head.yolo_head import YOLOXHead
 def build_darknet(backbone_config: DictConfig):
     return CSPDarknet(dep_mul=backbone_config.depth,
                       wid_mul=backbone_config.width,
+                      input_dim=backbone_config.input_dim,
                       out_features=backbone_config.out_features,
                       depthwise=backbone_config.depthwise,
                       act=backbone_config.act)

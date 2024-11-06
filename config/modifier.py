@@ -47,6 +47,12 @@ def dynamically_modify_train_config(config: DictConfig):
             mdl_hw = _get_square_hw(hw=mdl_hw)
             dataset_cfg.target_size = mdl_hw
 
+            if dataset_cfg.ev_representation == 'event_frame':
+                input_dim = 3
+            else:
+                input_dim = 20 
+            mdl_cfg.backbone.darknet.input_dim = input_dim
+
             class_len_map = {
                 'gen1': 2,
                 'gen4': 3,
