@@ -9,16 +9,22 @@ from pytorch_lightning import loggers as pl_loggers
 import os
 import argparse
 
-def create_resume_config(merged_config_path, max_epochs):
-    # 元のmerged_config.yamlを読み込む
+def create_resume_config_from_ckpt(ckpt_path, max_epochs):
+    # ckpt_path から merged_config.yaml のパスを推測
+    config_dir = os.path.dirname(ckpt_path)
+    merged_config_path = os.path.join(config_dir, 'merged_config.yaml')
+    
+    if not os.path.exists(merged_config_path):
+        raise FileNotFoundError(f"Config file not found at expected path: {merged_config_path}")
+
+    # 元の merged_config.yaml を読み込む
     merged_conf = OmegaConf.load(merged_config_path)
     
-    # max_epochsを上書き
+    # max_epochs を上書き
     merged_conf.experiment.training.max_epochs = max_epochs
 
     # 新しい設定ファイル名を作成
-    save_dir = os.path.dirname(merged_config_path)
-    new_config_path = os.path.join(save_dir, 'merged_config_part2.yaml')
+    new_config_path = os.path.join(config_dir, 'merged_config_part2.yaml')
 
     # 上書きした設定を新しいファイルに保存
     with open(new_config_path, 'w') as f:
@@ -27,9 +33,9 @@ def create_resume_config(merged_config_path, max_epochs):
     print(f"New resume configuration saved at: {new_config_path}")
     return new_config_path, merged_conf
 
-def main(merged_config_path, resume_ckpt, max_epochs):
-    # 新しい max_epochs 設定を含む設定ファイルを生成
-    new_config_path, merged_conf = create_resume_config(merged_config_path, max_epochs)
+def main(resume_ckpt, max_epochs):
+    # ckpt_path から新しい max_epochs 設定を含む設定ファイルを生成
+    new_config_path, merged_conf = create_resume_config_from_ckpt(resume_ckpt, max_epochs)
     dynamically_modify_train_config(merged_conf)
     
     # データセットやモデル情報を取得
@@ -54,7 +60,7 @@ def main(merged_config_path, resume_ckpt, max_epochs):
         LearningRateMonitor(logging_interval='step')
     ]
 
-    # TensorBoard Loggerの設定
+    # TensorBoard Logger の設定
     logger = pl_loggers.TensorBoardLogger(
         save_dir=save_dir,
         name='',
@@ -70,8 +76,8 @@ def main(merged_config_path, resume_ckpt, max_epochs):
         callbacks=callbacks,
         accelerator='gpu',
         precision=train_cfg.precision, 
-        devices=[0], 
-        benchmark=True, 
+        devices=[0],  # 使用するGPUのIDのリスト
+        benchmark=True,  # cudnn.benchmark を使用して高速化
     )
 
     # 再開トレーニングの実行
@@ -79,9 +85,8 @@ def main(merged_config_path, resume_ckpt, max_epochs):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Resume training from a specified checkpoint')
-    parser.add_argument('--config', type=str, required=True, help='Path to the original merged config file')
     parser.add_argument('--resume_ckpt', type=str, required=True, help='Path to checkpoint to resume from')
     parser.add_argument('--max_epochs', type=int, required=True, help='New max epochs for resumed training')
 
     args = parser.parse_args()
-    main(args.config, args.resume_ckpt, args.max_epochs)
+    main(args.resume_ckpt, args.max_epochs)
