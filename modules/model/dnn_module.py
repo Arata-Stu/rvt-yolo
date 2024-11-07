@@ -1,8 +1,10 @@
+import numpy as np
 import torch
 import torch.nn as nn
 import pytorch_lightning as pl
 from functools import partial
 from omegaconf import DictConfig
+from warnings import warn
 
 from models.detection.build import DNNDetectionModel
 from utils.eval.prophesee.evaluator import PropheseeEvaluator
@@ -35,7 +37,6 @@ class DNNModule(pl.LightningModule):
                                     nms_thre=full_config.model.postprocess.nms_thre,
                                     class_agnostic=False)
 
-
        
     def setup(self, stage):
         self.started_training = True
@@ -43,10 +44,10 @@ class DNNModule(pl.LightningModule):
         if stage == 'fit':
             self.started_training = False
             self.val_evaluator = PropheseeEvaluator(dataset=self.full_config.dataset.name, 
-                                                downsample_by_2=self.full_config.dataset.val.downsample_by_factor_2)
+                                                    downsample_by_2=self.full_config.dataset.val.downsample_by_factor_2)
         elif stage == 'test':
             self.test_evaluator = PropheseeEvaluator(dataset=self.full_config.dataset.name, 
-                                                downsample_by_2=self.full_config.dataset.test.downsample_by_factor_2)
+                                                     downsample_by_2=self.full_config.dataset.test.downsample_by_factor_2)
         
         
     def forward(self, x, targets=None):
@@ -70,7 +71,6 @@ class DNNModule(pl.LightningModule):
         self.log('epoch_train_loss', avg_loss, on_epoch=True, prog_bar=True, logger=True)
 
     def validation_step(self, batch, batch_idx):
-        
         self.model.eval()
         model_to_eval = self.model
 
@@ -82,7 +82,6 @@ class DNNModule(pl.LightningModule):
         targets.requires_grad = False
         
         preds = model_to_eval(imgs)
-
         processed_preds = self.post_process(prediction=preds)
 
         loaded_labels_proph, yolox_preds_proph = to_prophesee(loaded_label_tensor=targets, 
@@ -93,17 +92,8 @@ class DNNModule(pl.LightningModule):
             self.val_evaluator.add_labels(loaded_labels_proph)
             self.val_evaluator.add_predictions(yolox_preds_proph)
 
-        
-        return 
-
     def on_validation_epoch_end(self):
-        if self.started_training:
-            if self.val_evaluator.has_data():
-                metrics = self.val_evaluator.evaluate_buffer(img_height=self.height,
-                                                            img_width=self.width)
-                for k, v in metrics.items():
-                    self.log(f'val_{k}', v, on_epoch=True, prog_bar=True, logger=True)
-                self.val_evaluator.reset_buffer()
+        self.run_eval(self.val_evaluator, mode="val")
 
     def test_step(self, batch, batch_idx):
         self.model.eval()
@@ -116,30 +106,65 @@ class DNNModule(pl.LightningModule):
         targets.requires_grad = False
         
         preds = model_to_eval(imgs)
-
         processed_preds = self.post_process(prediction=preds)
 
         loaded_labels_proph, yolox_preds_proph = to_prophesee(loaded_label_tensor=targets, 
                                                               label_timestamps=timestamps, 
                                                               yolox_pred_list=processed_preds)
 
-
         if self.started_training:
             self.test_evaluator.add_labels(loaded_labels_proph)
             self.test_evaluator.add_predictions(yolox_preds_proph)
 
-        return 
-
     def on_test_epoch_end(self):
-        if self.started_training:
-            if self.test_evaluator.has_data():
-                metrics = self.test_evaluator.evaluate_buffer(img_height=self.height,
-                                                            img_width=self.width)
-                for k, v in metrics.items():
-                    self.log(f'test_{k}', v, on_epoch=True, prog_bar=True, logger=True)
-                self.test_evaluator.reset_buffer()
+        self.run_eval(self.test_evaluator, mode="test")
+
+    def run_eval(self, evaluator, mode, batch_size, hw_tuple):
+        """評価のための共通関数（分散処理なし）"""
+        if evaluator is None:
+            warn(f'Evaluator is None in {mode=}', UserWarning, stacklevel=2)
+            return
         
+        assert batch_size is not None, "Batch size is None"
+        assert hw_tuple is not None, "Image height and width are not set"
         
+        # 評価バッファにデータがあるか確認
+        if evaluator.has_data():
+            # 画像サイズを指定してメトリクスを評価
+            metrics = evaluator.evaluate_buffer(img_height=hw_tuple[0], img_width=hw_tuple[1])
+            assert metrics is not None, "Evaluation metrics are None"
+
+            # ログ用のディクショナリを作成
+            prefix = f'{mode}/'
+            log_dict = {}
+            for k, v in metrics.items():
+                if isinstance(v, (int, float)):
+                    value = torch.tensor(v)
+                elif isinstance(v, np.ndarray):
+                    value = torch.from_numpy(v)
+                elif isinstance(v, torch.Tensor):
+                    value = v
+                else:
+                    raise NotImplementedError(f"Unsupported type for metric {k}: {type(v)}")
+                    
+                # 値がスカラーであることを確認し、デバイスに送る
+                assert value.ndim == 0, f'Metric {k} must be a scalar, got {value.ndim} dimensions'
+                log_dict[f'{prefix}{k}'] = value.to(self.device)
+
+            # メトリクスのロギング
+            self.log_dict(log_dict, on_step=False, on_epoch=True, batch_size=batch_size)
+            
+            # グローバルステップを使ったメトリクスログ（WandBなどの場合）
+            if self.trainer.is_global_zero:
+                add_hack = 2
+                step = self.trainer.global_step + add_hack
+                self.logger.log_metrics(metrics=log_dict, step=step)
+
+            # 評価バッファをリセット
+            evaluator.reset_buffer()
+        else:
+            warn(f'Evaluator has no data in {mode=}', UserWarning, stacklevel=2)
+    
     def configure_optimizers(self):
         lr = self.full_config.experiment.training.learning_rate
         weight_decay = self.full_config.experiment.training.weight_decay
@@ -152,8 +177,6 @@ class DNNModule(pl.LightningModule):
         total_steps = scheduler_params.total_steps
         assert total_steps is not None
         assert total_steps > 0
-        # Here we interpret the final lr as max_lr/final_div_factor.
-        # Note that Pytorch OneCycleLR interprets it as initial_lr/final_div_factor:
         final_div_factor_pytorch = scheduler_params.final_div_factor / scheduler_params.div_factor
         lr_scheduler = torch.optim.lr_scheduler.OneCycleLR(
             optimizer=optimizer,
@@ -173,6 +196,3 @@ class DNNModule(pl.LightningModule):
         }
 
         return {'optimizer': optimizer, 'lr_scheduler': lr_scheduler_config}
-
-
-
