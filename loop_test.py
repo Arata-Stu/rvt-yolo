@@ -1,6 +1,7 @@
 import yaml
 from test import main as test  # test.py の main 関数をインポート
 import os
+import sys
 
 def load_ckpt_paths(yaml_path="list.yaml"):
     """YAMLファイルからチェックポイントパスのリストを読み込む"""
@@ -20,5 +21,7 @@ def batch_test(yaml_path="list.yaml"):
             print(f"Checkpoint file {ckpt_path} does not exist. Skipping.")
 
 if __name__ == '__main__':
+    # コマンドライン引数でyamlファイルパスを取得
+    yaml_path = sys.argv[1] if len(sys.argv) > 1 else "list.yaml"
     # 繰り返し処理を開始
-    batch_test()
+    batch_test(yaml_path)
