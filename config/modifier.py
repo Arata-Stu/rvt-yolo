@@ -51,7 +51,7 @@ def dynamically_modify_train_config(config: DictConfig):
                 input_dim = 3
             else:
                 input_dim = 20 
-            mdl_cfg.backbone.darknet.input_dim = input_dim
+            mdl_cfg.backbone.input_dim = input_dim
 
             class_len_map = {
                 'gen1': 2,
