@@ -1,6 +1,6 @@
 dataset:
   name: gen1
-  data_dir: './datasets/pre_gen1'
+  data_dir: './datasets/pre_gen1_histogram'
   orig_size: [240, 304]
   target_size: ???
 
