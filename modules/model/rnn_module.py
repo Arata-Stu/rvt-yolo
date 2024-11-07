@@ -135,8 +135,13 @@ class RNNModule(pl.LightningModule):
 
     
     def on_train_epoch_end(self):
-        avg_loss = self.trainer.callback_metrics['train_loss'].mean()
-        self.log('epoch_train_loss', avg_loss, on_epoch=True, prog_bar=True, logger=True)
+        #訓練を再開した時の、ckptコールバックのエラーを回避するため
+        if 'val_AP' not in self.trainer.callback_metrics:
+            self.log('val_AP', 0.0, on_epoch=True, prog_bar=True, logger=True)
+
+        if self.started_training:
+            avg_loss = self.trainer.callback_metrics['train_loss'].mean()
+            self.log('epoch_train_loss', avg_loss, on_epoch=True, prog_bar=True, logger=True)
 
     def validation_step(self, batch, batch_idx):
         # モデルを評価モードに設定
