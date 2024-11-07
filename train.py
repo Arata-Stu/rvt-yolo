@@ -49,7 +49,7 @@ def main(model_config, exp_config, dataset_config):
     callbacks = [
         ModelCheckpoint(
             dirpath=save_dir,  # save_dirにチェックポイントを保存
-            filename='{epoch:02d}-{AP:.2f}',
+            filename='{epoch:02d}-{val_AP:.2f}',
             monitor='val_AP',  # 基準とする量
             mode="max", 
             save_top_k=3,  # 保存するトップkのチェックポイント

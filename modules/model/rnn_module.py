@@ -1,10 +1,8 @@
-import numpy as np
 import torch
 import torch.nn as nn
 import pytorch_lightning as pl
 from functools import partial
 from omegaconf import DictConfig
-from warnings import warn
 
 from models.detection.build import RNNDetectionModel
 from modules.utils.rnn_state import RNNStates
@@ -333,50 +331,6 @@ class RNNModule(pl.LightningModule):
                 for k, v in metrics.items():
                     self.log(f'test_{k}', v, on_epoch=True, prog_bar=True, logger=True)
                 self.test_evaluator.reset_buffer()
-
-    def run_eval(self, evaluator, mode):
-        """評価のための共通関数（分散処理なし）"""
-        if evaluator is None:
-            warn(f'Evaluator is None in {mode=}', UserWarning, stacklevel=2)
-            return
-        
-        # 評価バッファにデータがあるか確認
-        if evaluator.has_data():
-            # 画像サイズを指定してメトリクスを評価
-            metrics = evaluator.evaluate_buffer(img_height=self.height, img_width=self.width)
-            assert metrics is not None, "Evaluation metrics are None"
-
-            # ログ用のディクショナリを作成
-            prefix = f'{mode}/'
-            log_dict = {}
-            for k, v in metrics.items():
-                if isinstance(v, (int, float)):
-                    value = torch.tensor(v)
-                elif isinstance(v, np.ndarray):
-                    value = torch.from_numpy(v)
-                elif isinstance(v, torch.Tensor):
-                    value = v
-                else:
-                    raise NotImplementedError(f"Unsupported type for metric {k}: {type(v)}")
-                    
-                # 値がスカラーであることを確認し、デバイスに送る
-                assert value.ndim == 0, f'Metric {k} must be a scalar, got {value.ndim} dimensions'
-                log_dict[f'{prefix}{k}'] = value.to(self.device)
-
-            # メトリクスのロギング
-            self.log_dict(log_dict, on_step=False, on_epoch=True)
-            
-            # グローバルステップを使ったメトリクスログ（WandBなどの場合）
-            if self.trainer.is_global_zero:
-                add_hack = 2
-                step = self.trainer.global_step + add_hack
-                self.logger.log_metrics(metrics=log_dict, step=step)
-
-            # 評価バッファをリセット
-            evaluator.reset_buffer()
-        else:
-            warn(f'Evaluator has no data in {mode=}', UserWarning, stacklevel=2)
-    
         
         
     def configure_optimizers(self):
