@@ -1,0 +1,87 @@
+import yaml
+from omegaconf import OmegaConf
+from config.modifier import dynamically_modify_train_config
+from modules.fetch import fetch_data_module, fetch_model_module
+
+import pytorch_lightning as pl
+from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor
+from pytorch_lightning import loggers as pl_loggers
+import os
+import argparse
+
+def create_resume_config(merged_config_path, max_epochs):
+    # 元のmerged_config.yamlを読み込む
+    merged_conf = OmegaConf.load(merged_config_path)
+    
+    # max_epochsを上書き
+    merged_conf.experiment.training.max_epochs = max_epochs
+
+    # 新しい設定ファイル名を作成
+    save_dir = os.path.dirname(merged_config_path)
+    new_config_path = os.path.join(save_dir, 'merged_config_part2.yaml')
+
+    # 上書きした設定を新しいファイルに保存
+    with open(new_config_path, 'w') as f:
+        yaml.dump(OmegaConf.to_container(merged_conf, resolve=True), f)
+
+    print(f"New resume configuration saved at: {new_config_path}")
+    return new_config_path, merged_conf
+
+def main(merged_config_path, resume_ckpt, max_epochs):
+    # 新しい max_epochs 設定を含む設定ファイルを生成
+    new_config_path, merged_conf = create_resume_config(merged_config_path, max_epochs)
+    dynamically_modify_train_config(merged_conf)
+    
+    # データセットやモデル情報を取得
+    data = fetch_data_module(merged_conf)
+    data.setup('fit')
+    model = fetch_model_module(merged_conf)
+    model.setup('fit')
+    
+    # ログ保存用のディレクトリを設定
+    save_dir = os.path.dirname(new_config_path)
+    
+    # コールバックの設定
+    callbacks = [
+        ModelCheckpoint(
+            dirpath=save_dir,
+            filename='{epoch:02d}-{AP:.2f}',
+            monitor='val_AP',
+            mode="max", 
+            save_top_k=3,
+            save_last=True, 
+        ),
+        LearningRateMonitor(logging_interval='step')
+    ]
+
+    # TensorBoard Loggerの設定
+    logger = pl_loggers.TensorBoardLogger(
+        save_dir=save_dir,
+        name='',
+        version='',
+    )
+
+    train_cfg = merged_conf.experiment.training
+    # トレーナーの設定
+    trainer = pl.Trainer(
+        max_epochs=train_cfg.max_epochs,
+        max_steps=train_cfg.max_steps,
+        logger=logger,
+        callbacks=callbacks,
+        accelerator='gpu',
+        precision=train_cfg.precision, 
+        devices=[0], 
+        benchmark=True, 
+    )
+
+    # 再開トレーニングの実行
+    trainer.fit(model, datamodule=data, ckpt_path=resume_ckpt)
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Resume training from a specified checkpoint')
+    parser.add_argument('--config', type=str, required=True, help='Path to the original merged config file')
+    parser.add_argument('--resume_ckpt', type=str, required=True, help='Path to checkpoint to resume from')
+    parser.add_argument('--max_epochs', type=int, required=True, help='New max epochs for resumed training')
+
+    args = parser.parse_args()
+    main(args.config, args.resume_ckpt, args.max_epochs)
