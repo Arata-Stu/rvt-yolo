@@ -8,6 +8,7 @@ from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor
 from pytorch_lightning import loggers as pl_loggers
 import os
 import argparse
+from datetime import datetime
 
 def create_resume_config_from_ckpt(ckpt_path, max_epochs):
     # ckpt_path から merged_config.yaml のパスを推測
@@ -61,11 +62,12 @@ def main(resume_ckpt, max_epochs):
     ]
 
     # TensorBoard Logger の設定
+    resume_timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")  # 再開時のタイムスタンプを取得
     logger = pl_loggers.TensorBoardLogger(
-        save_dir=save_dir,
-        name='',
-        version='',
-    )
+    save_dir=save_dir,
+    name=f"resume_{resume_timestamp}",  # 新しいサブディレクトリを作成
+    version='',
+)
 
     train_cfg = merged_conf.experiment.training
     # トレーナーの設定
