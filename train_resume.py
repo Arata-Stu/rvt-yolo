@@ -62,7 +62,7 @@ def main(resume_ckpt, max_epochs):
     ]
 
     # TensorBoard Logger の設定
-    resume_timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")  # 再開時のタイムスタンプを取得
+    resume_timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")  # 再開時のタイムスタンプを取得
     logger = pl_loggers.TensorBoardLogger(
     save_dir=save_dir,
     name=f"resume_{resume_timestamp}",  # 新しいサブディレクトリを作成
