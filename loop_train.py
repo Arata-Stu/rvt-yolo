@@ -16,8 +16,10 @@ with open(args.config, 'r') as file:
 model_configs = config_list['model_configs']
 exp_configs = config_list['exp_configs']
 dataset_configs = config_list['dataset_configs']
+ckpt_paths = config_list.get('ckpt_paths', [None] * len(dataset_configs))
 
 # すべての組み合わせをループ
-for model_config, exp_config, dataset_config in product(model_configs, exp_configs, dataset_configs):
-    # 各組み合わせで train.py の main 関数を呼び出し
-    train(model_config, exp_config, dataset_config)
+for (model_config, exp_config, dataset_config), ckpt_path in product(
+        zip(model_configs, exp_configs, dataset_configs), ckpt_paths):
+    # 各組み合わせで train.py の main 関数を呼び出し、ckpt_pathが存在する場合はそれを使用して再開
+    train(model_config, exp_config, dataset_config, resume_ckpt=ckpt_path)

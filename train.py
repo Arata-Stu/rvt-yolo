@@ -10,7 +10,7 @@ import os
 import datetime
 import argparse
 
-def main(model_config, exp_config, dataset_config):
+def main(model_config, exp_config, dataset_config, resume_ckpt=None):
     base_save_dir = './result'
     
     # 実行時のタイムスタンプを付与して、一意のディレクトリ名を生成
@@ -79,14 +79,15 @@ def main(model_config, exp_config, dataset_config):
         benchmark=True,  # cudnn.benchmarkを使用して高速化
     )
 
-    # モデルの学習を実行
-    trainer.fit(model, datamodule=data)
+    # モデルの学習を実行（resume_ckptが指定されている場合はそれを使用して再開）
+    trainer.fit(model, datamodule=data, ckpt_path=resume_ckpt)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Train a model with specified YAML config files')
     parser.add_argument('--model', type=str, required=True, help='Path to model configuration file')
     parser.add_argument('--exp', type=str, required=True, help='Path to experiment configuration file')
     parser.add_argument('--dataset', type=str, required=True, help='Path to dataset configuration file')
-    
+    parser.add_argument('--resume_ckpt', type=str, default=None, help='Path to checkpoint to resume from')
+
     args = parser.parse_args()
-    main(args.model, args.exp, args.dataset)
+    main(args.model, args.exp, args.dataset, args.resume_ckpt)
