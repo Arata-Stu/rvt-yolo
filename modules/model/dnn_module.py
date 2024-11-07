@@ -149,7 +149,7 @@ class DNNModule(pl.LightningModule):
                 log_dict[f'{prefix}{k}'] = value.to(self.device)
 
             # メトリクスのロギング
-            self.log_dict(log_dict, on_step=False, on_epoch=True, batch_size=batch_size)
+            self.log_dict(log_dict, on_step=False, on_epoch=True)
             
             # グローバルステップを使ったメトリクスログ（WandBなどの場合）
             if self.trainer.is_global_zero:
