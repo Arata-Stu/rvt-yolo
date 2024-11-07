@@ -119,19 +119,16 @@ class DNNModule(pl.LightningModule):
     def on_test_epoch_end(self):
         self.run_eval(self.test_evaluator, mode="test")
 
-    def run_eval(self, evaluator, mode, batch_size, hw_tuple):
+    def run_eval(self, evaluator, mode):
         """評価のための共通関数（分散処理なし）"""
         if evaluator is None:
             warn(f'Evaluator is None in {mode=}', UserWarning, stacklevel=2)
             return
         
-        assert batch_size is not None, "Batch size is None"
-        assert hw_tuple is not None, "Image height and width are not set"
-        
         # 評価バッファにデータがあるか確認
         if evaluator.has_data():
             # 画像サイズを指定してメトリクスを評価
-            metrics = evaluator.evaluate_buffer(img_height=hw_tuple[0], img_width=hw_tuple[1])
+            metrics = evaluator.evaluate_buffer(img_height=self.height, img_width=self.width)
             assert metrics is not None, "Evaluation metrics are None"
 
             # ログ用のディクショナリを作成
