@@ -24,17 +24,21 @@ def create_resume_config_from_ckpt(ckpt_path, max_epochs):
     # max_epochs を上書き
     merged_conf.experiment.training.max_epochs = max_epochs
 
-    # 設定ファイルの連番を取得
-    existing_files = [f for f in os.listdir(config_dir) if f.startswith("merged_config_") and f.endswith(".yaml")]
-    next_number = len(existing_files) + 1
-    new_config_path = os.path.join(config_dir, f'merged_config_{next_number}.yaml')
+    # 再開用の新しいディレクトリを生成
+    timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    new_config_dir = os.path.join(config_dir, f"resume_{timestamp}")
+    os.makedirs(new_config_dir, exist_ok=True)
 
+    # 新しい設定ファイル名を作成
+    new_config_path = os.path.join(new_config_dir, 'merged_config.yaml')
+    
     # 上書きした設定を新しいファイルに保存
     with open(new_config_path, 'w') as f:
         yaml.dump(OmegaConf.to_container(merged_conf, resolve=True), f)
 
     print(f"New resume configuration saved at: {new_config_path}")
     return new_config_path, merged_conf
+
 def main(resume_ckpt, max_epochs):
     # ckpt_path から新しい max_epochs 設定を含む設定ファイルを生成
     new_config_path, merged_conf = create_resume_config_from_ckpt(resume_ckpt, max_epochs)
@@ -46,13 +50,13 @@ def main(resume_ckpt, max_epochs):
     model = fetch_model_module(merged_conf)
     model.setup('fit')
     
-    # ログ保存用のディレクトリを設定
+    # 新しいログ保存用のディレクトリ
     save_dir = os.path.dirname(new_config_path)
     
     # コールバックの設定
     callbacks = [
         ModelCheckpoint(
-            dirpath=save_dir,
+            dirpath=save_dir,  # 新しいディレクトリにチェックポイントを保存
             filename='{epoch:02d}-{AP:.2f}',
             monitor='val_AP',
             mode="max", 
@@ -62,13 +66,12 @@ def main(resume_ckpt, max_epochs):
         LearningRateMonitor(logging_interval='step')
     ]
 
-    # TensorBoard Logger の設定
-    resume_timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")  # 再開時のタイムスタンプを取得
+    # 新しいディレクトリにTensorBoard Loggerを設定
     logger = pl_loggers.TensorBoardLogger(
-    save_dir=save_dir,
-    name=f"resume_{resume_timestamp}",  # 新しいサブディレクトリを作成
-    version='',
-)
+        save_dir=save_dir,  # 新しい再開用ディレクトリに保存
+        name='',  # サブディレクトリを作成しない
+        version=''
+    )
 
     train_cfg = merged_conf.experiment.training
     # トレーナーの設定
