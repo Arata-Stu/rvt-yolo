@@ -24,8 +24,10 @@ def create_resume_config_from_ckpt(ckpt_path, max_epochs):
     # max_epochs を上書き
     merged_conf.experiment.training.max_epochs = max_epochs
 
-    # 新しい設定ファイル名を作成
-    new_config_path = os.path.join(config_dir, 'merged_config_part2.yaml')
+    # 設定ファイルの連番を取得
+    existing_files = [f for f in os.listdir(config_dir) if f.startswith("merged_config_") and f.endswith(".yaml")]
+    next_number = len(existing_files) + 1
+    new_config_path = os.path.join(config_dir, f'merged_config_{next_number}.yaml')
 
     # 上書きした設定を新しいファイルに保存
     with open(new_config_path, 'w') as f:
@@ -33,7 +35,6 @@ def create_resume_config_from_ckpt(ckpt_path, max_epochs):
 
     print(f"New resume configuration saved at: {new_config_path}")
     return new_config_path, merged_conf
-
 def main(resume_ckpt, max_epochs):
     # ckpt_path から新しい max_epochs 設定を含む設定ファイルを生成
     new_config_path, merged_conf = create_resume_config_from_ckpt(resume_ckpt, max_epochs)
