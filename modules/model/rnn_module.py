@@ -237,9 +237,10 @@ class RNNModule(pl.LightningModule):
                 metrics = self.val_evaluator.evaluate_buffer(img_height=self.height,
                                                             img_width=self.width)
                 for k, v in metrics.items():
-                    self.log(f'val_{k}', v, on_epoch=True, prog_bar=True, logger=True)
+                    # val_APのみプログレスバーに表示する
+                    prog_bar_flag = True if k == "AP" else False
+                    self.log(f'val_{k}', v, on_epoch=True, prog_bar=prog_bar_flag, logger=True)
                 self.val_evaluator.reset_buffer()
-
     def test_step(self, batch, batch_idx):
         # モデルを評価モードに設定
         self.model.eval()
@@ -334,7 +335,9 @@ class RNNModule(pl.LightningModule):
                 metrics = self.test_evaluator.evaluate_buffer(img_height=self.height,
                                                             img_width=self.width)
                 for k, v in metrics.items():
-                    self.log(f'test_{k}', v, on_epoch=True, prog_bar=True, logger=True)
+                    # val_APのみプログレスバーに表示する
+                    prog_bar_flag = True if k == "AP" else False
+                    self.log(f'test_{k}', v, on_epoch=True, prog_bar=prog_bar_flag, logger=True)
                 self.test_evaluator.reset_buffer()
         
         
