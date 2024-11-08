@@ -240,69 +240,77 @@ class YOLOXFormatter:
 
 def flip_horizontal(image, labels):
     """
-    Flip the image and labels horizontally.
+    画像とラベルを水平方向に反転します。
 
     Args:
-        image (numpy.ndarray): Image array of shape (D, H, W).
-        labels (numpy.ndarray or None): Labels array with fields 'x', 'y', 'w', 'h', or None.
+        image (numpy.ndarray): 形状が (D, H, W) の画像データ。
+        labels (numpy.ndarray or None): 'x', 'y', 'w', 'h' フィールドを持つラベルデータ、または None。
 
     Returns:
-        flipped_image (numpy.ndarray): Horizontally flipped image.
-        flipped_labels (numpy.ndarray or None): Labels adjusted for the flipped image, or None.
+        flipped_image (numpy.ndarray): 反転後の画像。
+        flipped_labels (numpy.ndarray or None): 調整されたラベル、または None。
     """
 
-    # Flip the image horizontally
-    flipped_image = image[:, :, ::-1]
-    image_width = image.shape[2]
+    D, H, W = image.shape
+
+    # 各チャネルを反転
+    flipped_channels = []
+    for d in range(D):
+        channel = image[d]
+        flipped_channel = cv2.flip(channel, 1)  # 水平方向に反転
+        flipped_channels.append(flipped_channel)
+    flipped_image = np.stack(flipped_channels, axis=0)
 
     if labels is not None:
-        # Adjust the labels
+        # ラベルを調整
         labels = labels.copy()
-        # Keep labels with padding values (x=0, w=0) unchanged
+        # パディング値（x=0, w=0）のラベルはそのまま
         mask = (labels['x'] != 0) | (labels['w'] != 0)
-        labels['x'][mask] = image_width - labels['x'][mask] - labels['w'][mask]
+        labels['x'][mask] = W - labels['x'][mask] - labels['w'][mask]
     else:
         labels = None
 
     return flipped_image, labels
 
+
 def rotate(image, labels, angle):
     """
-    Rotate the image and labels by a given angle.
+    画像とラベルを指定した角度だけ回転します。
 
     Args:
-        image (numpy.ndarray): Image array of shape (D, H, W).
-        labels (numpy.ndarray or None): Labels array with fields 'x', 'y', 'w', 'h', or None.
-        angle (float): Rotation angle in degrees. Positive values mean counter-clockwise rotation.
+        image (numpy.ndarray): 形状が (D, H, W) の画像データ。
+        labels (numpy.ndarray or None): 'x', 'y', 'w', 'h' フィールドを持つラベルデータ、または None。
+        angle (float): 回転角度（度単位）。正の値は反時計回りの回転を意味します。
 
     Returns:
-        rotated_image (numpy.ndarray): Rotated image.
-        rotated_labels (numpy.ndarray or None): Labels adjusted for the rotated image, or None.
+        rotated_image (numpy.ndarray): 回転後の画像。
+        rotated_labels (numpy.ndarray or None): 回転後のラベル、または None。
     """
     D, H, W = image.shape
     center = (W / 2, H / 2)
 
-    # Create rotation matrix
+    # 回転行列を作成
     M = cv2.getRotationMatrix2D(center, angle, scale=1.0)
 
-    # Prepare image for cv2 (transpose to (H, W, D))
-    image_cv2 = np.transpose(image, (1, 2, 0))
+    # 各チャネルを個別に回転
+    rotated_channels = []
+    for d in range(D):
+        channel = image[d]
+        rotated_channel = cv2.warpAffine(
+            channel, M, (W, H), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_CONSTANT, borderValue=0
+        )
+        rotated_channels.append(rotated_channel)
 
-    # Apply rotation
-    rotated_image_cv2 = cv2.warpAffine(
-        image_cv2, M, (W, H), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_CONSTANT, borderValue=0
-    )
-
-    # Convert back to original shape (D, H, W)
-    rotated_image = np.transpose(rotated_image_cv2, (2, 0, 1))
+    # チャネルを再度スタック
+    rotated_image = np.stack(rotated_channels, axis=0)
 
     if labels is not None:
-        # Rotate the labels
+        # ラベルを回転
         labels = labels.copy()
         new_boxes = []
 
-        # Compute rotation matrix for labels
-        theta = np.deg2rad(-angle)  # Note: cv2 uses opposite sign for angle
+        # ラベル用の回転行列を計算
+        theta = np.deg2rad(-angle)  # cv2は角度の符号が逆
         rotation_matrix = np.array([
             [np.cos(theta), -np.sin(theta)],
             [np.sin(theta),  np.cos(theta)]
@@ -310,7 +318,7 @@ def rotate(image, labels, angle):
 
         for label in labels:
             x, y, w, h = label['x'], label['y'], label['w'], label['h']
-            # Define the four corners of the bounding box
+            # バウンディングボックスの4つのコーナーを定義
             corners = np.array([
                 [x, y],
                 [x + w, y],
@@ -318,16 +326,16 @@ def rotate(image, labels, angle):
                 [x, y + h]
             ])
 
-            # Shift corners to center
+            # コーナーを中心にシフト
             corners_centered = corners - center
 
-            # Apply rotation
+            # 回転を適用
             rotated_corners = np.dot(corners_centered, rotation_matrix.T)
 
-            # Shift back
+            # シフトを元に戻す
             rotated_corners += center
 
-            # Get new bounding box
+            # 新しいバウンディングボックスを取得
             x_coords = rotated_corners[:, 0]
             y_coords = rotated_corners[:, 1]
             x_min = x_coords.min()
@@ -340,7 +348,7 @@ def rotate(image, labels, angle):
 
             new_boxes.append((x_min, y_min, new_w, new_h))
 
-        # Update labels
+        # ラベルを更新
         labels['x'] = np.array([box[0] for box in new_boxes])
         labels['y'] = np.array([box[1] for box in new_boxes])
         labels['w'] = np.array([box[2] for box in new_boxes])
@@ -349,6 +357,7 @@ def rotate(image, labels, angle):
         labels = None
 
     return rotated_image, labels
+
 
 def clip_bboxes(labels, image_shape):
     """
@@ -428,23 +437,23 @@ def find_zoom_center(labels_list):
 
 def zoom_in(image, labels, zoom_factor, center=None):
     """
-    Zoom in on the image and adjust labels accordingly.
+    画像をズームインし、ラベルを調整します。
 
     Args:
-        image (numpy.ndarray): Image array of shape (D, H, W).
-        labels (numpy.ndarray or None): Labels array with fields 'x', 'y', 'w', 'h', or None.
-        zoom_factor (float): Factor by which to zoom in (>1).
-        center (Tuple[int, int], optional): Coordinates (x, y) for the center of zoom.
+        image (numpy.ndarray): 形状が (D, H, W) の画像データ。
+        labels (numpy.ndarray or None): 'x', 'y', 'w', 'h' フィールドを持つラベルデータ、または None。
+        zoom_factor (float): ズームインする倍率（>1）。
+        center (Tuple[int, int], optional): ズームの中心座標 (x, y)。
 
     Returns:
-        zoomed_image (numpy.ndarray): Zoomed-in image.
-        zoomed_labels (numpy.ndarray or None): Labels adjusted for the zoomed image, or None.
+        zoomed_image (numpy.ndarray): ズームイン後の画像。
+        zoomed_labels (numpy.ndarray or None): 調整されたラベル、または None。
     """
     D, H, W = image.shape
     new_H = int(H / zoom_factor)
     new_W = int(W / zoom_factor)
 
-    # Zoom window position: use center if provided, else random
+    # ズームウィンドウの位置
     if center is None:
         x1 = np.random.randint(0, W - new_W + 1)
         y1 = np.random.randint(0, H - new_H + 1)
@@ -453,25 +462,28 @@ def zoom_in(image, labels, zoom_factor, center=None):
         x1 = max(0, min(int(cx - new_W // 2), W - new_W))
         y1 = max(0, min(int(cy - new_H // 2), H - new_H))
 
-    # Crop the image
-    cropped_image = image[:, y1:y1 + new_H, x1:x1 + new_W]
+    # 各チャネルをクロップしてリサイズ
+    zoomed_channels = []
+    for d in range(D):
+        channel = image[d]
+        cropped_channel = channel[y1:y1 + new_H, x1:x1 + new_W]
+        zoomed_channel = cv2.resize(cropped_channel, (W, H), interpolation=cv2.INTER_CUBIC)
+        zoomed_channels.append(zoomed_channel)
 
-    # Resize back to original size using cv2
-    cropped_image_cv2 = np.transpose(cropped_image, (1, 2, 0))  # (H, W, D)
-    zoomed_image_cv2 = cv2.resize(cropped_image_cv2, (W, H), interpolation=cv2.INTER_CUBIC)
-    zoomed_image = np.transpose(zoomed_image_cv2, (2, 0, 1))  # (D, H, W)
+    # チャネルを再度スタック
+    zoomed_image = np.stack(zoomed_channels, axis=0)
 
     if labels is not None:
-        # Adjust labels
+        # ラベルを調整
         labels = labels.copy()
         labels['x'] = (labels['x'] - x1) * zoom_factor
         labels['y'] = (labels['y'] - y1) * zoom_factor
         labels['w'] = labels['w'] * zoom_factor
         labels['h'] = labels['h'] * zoom_factor
 
-        # Clip the bounding boxes to ensure they remain within the image bounds
+        # バウンディングボックスをクリップ
         zoomed_labels = clip_bboxes(labels, (H, W))
-        zoomed_labels = remove_flat_labels(zoomed_labels)  # Apply condition w > 0 and h > 0
+        zoomed_labels = remove_flat_labels(zoomed_labels)
     else:
         zoomed_labels = None
 
@@ -479,28 +491,31 @@ def zoom_in(image, labels, zoom_factor, center=None):
 
 def zoom_out(image, labels, zoom_factor, center=None):
     """
-    Zoom out the image by scaling down and placing it in a canvas.
+    画像をズームアウトし、ラベルを調整します。
 
     Args:
-        image (numpy.ndarray): Image array of shape (D, H, W).
-        labels (numpy.ndarray or None): Labels array with fields 'x', 'y', 'w', 'h', or None.
-        zoom_factor (float): Factor by which to zoom out (>1).
-        center (Tuple[int, int], optional): Coordinates (x, y) for the center of zoom.
+        image (numpy.ndarray): 形状が (D, H, W) の画像データ。
+        labels (numpy.ndarray or None): 'x', 'y', 'w', 'h' フィールドを持つラベルデータ、または None。
+        zoom_factor (float): ズームアウトする倍率（>1）。
+        center (Tuple[int, int], optional): ズームの中心座標 (x, y)。
 
     Returns:
-        zoomed_image (numpy.ndarray): Zoomed-out image with padding.
-        zoomed_labels (numpy.ndarray or None): Labels adjusted for the zoomed image, or None.
+        zoomed_image (numpy.ndarray): ズームアウト後の画像。
+        zoomed_labels (numpy.ndarray or None): 調整されたラベル、または None。
     """
     D, H, W = image.shape
     new_H = int(H / zoom_factor)
     new_W = int(W / zoom_factor)
 
-    # Resize the image using cv2
-    image_cv2 = np.transpose(image, (1, 2, 0))  # (H, W, D)
-    resized_image_cv2 = cv2.resize(image_cv2, (new_W, new_H), interpolation=cv2.INTER_CUBIC)
-    resized_image = np.transpose(resized_image_cv2, (2, 0, 1))  # (D, new_H, new_W)
+    # 各チャネルをリサイズ
+    resized_channels = []
+    for d in range(D):
+        channel = image[d]
+        resized_channel = cv2.resize(channel, (new_W, new_H), interpolation=cv2.INTER_CUBIC)
+        resized_channels.append(resized_channel)
+    resized_image = np.stack(resized_channels, axis=0)
 
-    # Create a canvas and place the resized image at the specified or random position
+    # キャンバスを作成し、リサイズした画像を配置
     canvas = np.zeros_like(image)
     if center is None:
         x1 = np.random.randint(0, W - new_W + 1)
@@ -509,24 +524,25 @@ def zoom_out(image, labels, zoom_factor, center=None):
         cx, cy = center
         x1 = max(0, min(int(cx - new_W // 2), W - new_W))
         y1 = max(0, min(int(cy - new_H // 2), H - new_H))
-            
+
     canvas[:, y1:y1 + new_H, x1:x1 + new_W] = resized_image
 
     if labels is not None:
-        # Adjust labels
+        # ラベルを調整
         labels = labels.copy()
         labels['x'] = labels['x'] / zoom_factor + x1
         labels['y'] = labels['y'] / zoom_factor + y1
         labels['w'] = labels['w'] / zoom_factor
         labels['h'] = labels['h'] / zoom_factor
 
-        # Clip the bounding boxes to ensure they remain within the image bounds
+        # バウンディングボックスをクリップ
         zoomed_labels = clip_bboxes(labels, (H, W))
-        zoomed_labels = remove_flat_labels(zoomed_labels)  # Apply condition w > 0 and h > 0
+        zoomed_labels = remove_flat_labels(zoomed_labels)
     else:
         zoomed_labels = None
 
     return canvas, zoomed_labels
+
 
 class RandomSpatialAugmentor:
     def __init__(self,
