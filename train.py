@@ -77,6 +77,7 @@ def main(model_config, exp_config, dataset_config):
         precision=train_cfg.precision, 
         devices=[0],  # 使用するGPUのIDのリスト
         benchmark=True,  # cudnn.benchmarkを使用して高速化
+        profiler='advanced',
     )
 
     # モデルの学習を実行
