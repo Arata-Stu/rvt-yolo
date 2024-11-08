@@ -68,16 +68,7 @@ def main(model_config, exp_config, dataset_config):
         version='',
     )
 
-    # PyTorch Profilerの設定
-    profiler = PyTorchProfiler(
-        dirpath=os.path.join(save_dir, "profiler_logs"),  # プロファイル結果を保存するディレクトリ
-        filename="profiler_trace",                       # ファイル名
-        activities=[torch.profiler.ProfilerActivity.CPU, torch.profiler.ProfilerActivity.CUDA],
-        schedule=torch.profiler.schedule(wait=1, warmup=1, active=3, repeat=2),
-        record_shapes=True,
-        profile_memory=True,
-        with_stack=True
-    )
+    
 
     train_cfg = merged_conf.experiment.training
     # トレーナーを設定
@@ -90,7 +81,7 @@ def main(model_config, exp_config, dataset_config):
         precision=train_cfg.precision, 
         devices=[0],  # 使用するGPUのIDのリスト
         benchmark=True,  # cudnn.benchmarkを使用して高速化
-        profiler= profiler,
+        profiler= 'simple',
     )
 
     # モデルの学習を実行
