@@ -4,7 +4,7 @@ dataset:
   orig_size: [240, 304]
   target_size: ???
 
-  ev_representation: event_histogram
+  ev_representation: stacked_histogram
   ev_delta_t: 10
   n_bins: 10
 
